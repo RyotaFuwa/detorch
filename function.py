@@ -36,8 +36,121 @@ class Function(ABC):
         """"""
 
     @abstractmethod
-    def backward(self, *dys):
+    def backward(self, dy):
         """"""
+
+
+# TODO: Type checking for inputs and outputs
+# each function has requirements on the shape and type of each input and output, also the num of inputs and outputs
+class Neg(Function):
+    def forward(self, x):
+        return -x
+
+    def backward(self, dy):
+        return -dy
+
+
+class Add(Function):
+    def forward(self, x0, x1):
+        return x0 + x1
+
+    def backward(self, dy):
+        return (dy, dy)
+
+
+class Sub(Function):
+    def forward(self, x0, x1):
+        return x0 - x1
+
+    def backward(self, dy):
+        return (dy, -dy)
+
+
+class Mul(Function):
+    def forward(self, x0, x1):
+        return x0 * x1
+
+    def backward(self, dy):
+        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        return (x1 * dy, x0 * dy)
+
+
+class Div(Function):
+    def forward(self, x0, x1):
+        return x0 / x1
+
+    def backward(self, dy):
+        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        return (dy / x1, dy * -x0 / x1 ** 2)
+
+
+class Pow(Function):
+    def __init__(self, exponent):
+        self.exponent = exponent
+
+    def forward(self, x):
+        return x ** self.exponent
+
+    def backward(self, dy):
+        x = self.inputs[0].data
+        return dy * self.exponent * x ** (self.exponent - 1)
+
+
+class Square(Pow):
+    def __init__(self):
+        super().__init__(2)
+
+
+class Cube(Pow):
+    def __init__(self):
+        super().__init__(3)
+
+
+class SquareRoot(Pow):
+    def __init__(self):
+        super().__init__(0.5)
+
+
+class Exp(Function):
+    def forward(self, x):
+        return np.exp(x)
+
+    def backward(self, dy):
+        x = self.inputs[0].data
+        return np.exp(x) * dy
+
+
+class Log(Function):
+    def forward(self, x):
+        return np.log(x)
+
+    def backward(self, dy):
+        x = self.inputs[0].data
+        return dy / x
+
+
+def neg(input):
+    return Neg()(input)
+
+
+def add(input1, input2):
+    return Add()(input1, input2)
+
+
+def sub(input1, input2):
+    return Sub()(input1, input2)
+
+
+def mul(input1, input2):
+    return Mul()(input1, input2)
+
+
+def div(input1, input2):
+    return Div()(input1, input2)
+
+
+def pow(input1, input2):
+    return Pow(input2)(input1)
 
 
 def square(input):
@@ -46,64 +159,5 @@ def square(input):
 
 def exp(input):
     return Exp()(input)
-
-
-def add(input1, input2):
-    return Add()(input1, input2)
-
-
-def mul(input1, input2):
-    return Mul()(input1, input2)
-
-
-# TODO: Type checking for inputs and outputs
-# each function has requirements on the shape and type of each input and output, also the num of inputs and outputs
-class Square(Function):
-    def forward(self, *xs):
-        return xs[0] ** 2
-
-    def backward(self, dy):
-        x = self.inputs[0].data
-        return 2 * x * dy
-
-
-class Exp(Function):
-    def forward(self, *xs):
-        return np.exp(xs[0])
-
-    def backward(self, dy):
-        x = self.inputs[0].data
-        return np.exp(x) * dy
-
-
-class Add(Function):
-    def forward(self, *xs):
-        x0, x1 = xs[0], xs[1]
-        return x0 + x1
-
-    def backward(self, dy):
-        return (dy, dy)
-
-
-class Mul(Function):
-    def forward(self, *xs):
-        x0, x1 = xs[0], xs[1]
-        return x0 * x1
-
-    def backward(self, dy):
-        x0, x1 = self.inputs[0].data, self.inputs[1].data
-        return (x1 * dy, x0 * dy)
-
-
-def tmp_test():
-    a = Variable(2.0)
-    x = square(a)
-    x = add(square(x), square(x))
-    x.backward()
-    print(a.grad)
-
-
-if __name__ == '__main__':
-    tmp_test()
 
 

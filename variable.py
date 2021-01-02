@@ -1,10 +1,10 @@
 import numpy as np
 from ds import Heap
 
-# TODO: topological sort for graph computation
 DEFAULT_DTYPE = np.float64
 
 
+# TODO: topological sort for graph computation
 class Variable:
     def __init__(self, data, name='', dtype=DEFAULT_DTYPE, parent_f=None):
         self.data = self.as_array(data, dtype)
@@ -37,18 +37,6 @@ class Variable:
     @property
     def dtype(self):
         return self.data.dtype
-
-
-    @staticmethod
-    def as_array(data, dtype=DEFAULT_DTYPE):
-        if type(data) == np.ndarray:
-            return data.astype(dtype)
-        elif np.isscalar(data):
-            return np.array(data, dtype=dtype)
-        elif isinstance(data, (tuple, list)):
-            return np.array(data, dtype=dtype)
-        else:
-            raise TypeError(f"data type of {data} is not compatible. data should be an array-like data structure")
 
     def backward(self, retain_grads=False):
         if self.grad is None:
@@ -87,4 +75,5 @@ class Variable:
                 i.grad = None
                 if i.parent_f is not None:
                     f_nodes.append(i.parent_f)
+
 
