@@ -153,11 +153,5 @@ def pow(input1, input2):
     return Pow(input2)(input1)
 
 
-def square(input):
-    return Square()(input)
-
-
-def exp(input):
-    return Exp()(input)
-
+# a lot of functions
 
