@@ -64,6 +64,10 @@ class Tensor:
     def dtype(self):
         return self.data.dtype
 
+    @property
+    def T(self):
+        return transpose(self)
+
     # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
     def backward(self, retain_grads=False, create_graph=False):
         if self.grad is None:
@@ -105,6 +109,23 @@ class Tensor:
                 i.grad = None
                 if i.parent_f is not None:
                     f_nodes.append(i.parent_f)
+
+    def view(self, *shape):
+        return view(self, *shape)
+
+    def view_(self, *shape):
+        self.data.reshape(shape)
+        return self
+
+    def transpose(self):
+        return transpose(self)
+
+    def T(self):
+        return self.transpose()
+
+    def transpose_(self):
+        self.data = self.data.T
+        return self
 
     def add(self, other):
         return add(self, other)
@@ -165,13 +186,15 @@ class Tensor:
         return pow(self, power)
 
     @staticmethod
-    def as_array(data, dtype=DEFAULT_DTYPE):
+    def as_array(data, dtype=None):
         if type(data) == np.ndarray:
-            return data.astype(dtype)
+            if dtype is not None:
+                return data.astype(dtype)
+            return data
         elif np.isscalar(data):
-            return np.array(data, dtype=dtype)
+            return np.array(data, dtype=dtype if dtype is not None else DEFAULT_DTYPE)
         elif isinstance(data, (tuple, list)):
-            return np.array(data, dtype=dtype)
+            return np.array(data, dtype=dtype if dtype is not None else DEFAULT_DTYPE)
         else:
             raise TypeError(f"data type of {data} is not compatible. data should be an array-like data structure")
 
@@ -213,15 +236,22 @@ class Function(ABC):
 # each function has requirements on the shape and type of each input and output, also the num of inputs and outputs
 class View(Function):
     def __init__(self, *shape):
-        self.old_shape = ()
         self.shape = shape
 
     def forward(self, x):
-        self.old_shape = x.shape
+        self.x_shape = x.shape
         return x.reshape(self.shape)
 
     def backward(self, dy):
-        return dy.reshape(self.old_shape)
+        return view(self, *self.x_shape)
+
+
+class Transpose(Function):
+    def forward(self, x):
+        return x.data.T
+
+    def backward(self, dy):
+        return transpose(dy)
 
 
 class Neg(Function):
@@ -278,37 +308,61 @@ class Pow(Function):
         return dy * self.exponent * x ** (self.exponent - 1)
 
 
-class Square(Pow):
-    def __init__(self):
-        super().__init__(2)
+class Sum(Function):
+    def __init__(self, axis=None, keepdims=False):
+        self.axis = axis
+        self.keepdims = keepdims
 
-
-class Cube(Pow):
-    def __init__(self):
-        super().__init__(3)
-
-
-class SquareRoot(Pow):
-    def __init__(self):
-        super().__init__(0.5)
-
-
-class Exp(Function):
     def forward(self, x):
-        return np.exp(x)
+        self.x_shape = x.shape
+        return x.sum(axis=self.axis, keepdims=self.keepdims)
 
     def backward(self, dy):
-        x, = self.inputs
-        return np.exp(x) * dy
+        if not self.keepdims:
+            pass
+        return broadcast_to(dy, self.x_shape)
 
 
-class Log(Function):
+class BroadcastTo(Function):
+    def __init__(self, *shape):
+        self.shape = shape
+
     def forward(self, x):
-        return np.log(x)
+        self.x_shape = x.shape
+        return np.broadcast_to(x, self.shape)
 
     def backward(self, dy):
-        x, = self.inputs
-        return dy / x
+
+        return sum_to(dy, self.x_shape)
+
+
+class SumTo(Function):
+    def __init__(self, *shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        return sum_to(x, self.shape)
+
+    def backward(self, dy):
+        return broadcast_to(dy, self.x_shape)
+
+
+class MatMul(Function):
+    def forward(self, x0, x1):
+        return np.dot(x0, x1)
+
+    def backward(self, dy):
+        x0, x1 = self.inputs
+        return mm(dy, x1.T), mm(x0.T, dy)
+
+
+def view(input, *shape):
+    return View(shape)(input)
+
+
+def transpose(input):
+    return Transpose()(input)
 
 
 def neg(input):
@@ -331,8 +385,28 @@ def div(input1, input2):
     return Div()(input1, input2)
 
 
-def pow(input1, exponent):
-    return Pow(exponent)(input1)
+def pow(input, exponent):
+    return Pow(exponent)(input)
+
+
+def sum(input, axis=None, keepdims=False):
+    return Sum(axis=axis, keepdims=keepdims)(input)
+
+
+def broadcast_to(input, shape):
+    if input.shape == shape:
+        return input
+    return BroadcastTo(*shape)(input)
+
+
+def sum_to(input, shape):
+    if input.shape == shape:
+        return input
+    return SumTo(*shape)(input)
+
+
+def mm(input1, input2):
+    return MatMul()(input1, input2)
 
 
 def tmp_test():

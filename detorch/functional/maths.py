@@ -7,7 +7,7 @@ class Exp(detorch.Function):
         return np.exp(x)
 
     def backward(self, dy):
-        x = self.inputs[0].data
+        x = self.inputs
         return np.exp(x) * dy
 
 
@@ -25,8 +25,8 @@ class Sin(detorch.Function):
         return np.sin(x)
 
     def backward(self, dy):
-        x = self.inputs[0].data
-        return np.cos(x) * dy
+        x, = self.inputs
+        return cos(x) * dy
 
 
 class Cos(detorch.Function):
@@ -34,8 +34,8 @@ class Cos(detorch.Function):
         return np.cos(x)
 
     def backward(self, dy):
-        x = self.inputs[0].data
-        return -np.sin(x) * dy
+        x, = self.inputs
+        return -sin(x) * dy
 
 
 class Tan(detorch.Function):
@@ -43,8 +43,17 @@ class Tan(detorch.Function):
         return np.tan(x)
 
     def backward(self, dy):
-        x = self.inputs[0].data
-        return dy / np.cos(x) ** 2
+        x = self.inputs
+        return dy / cos(x) ** 2
+
+
+class Tanh(detorch.Function):
+    def forward(self, x):
+        return np.tanh(x)
+
+    def backward(self, dy):
+        y = self.outputs[0]()
+        return dy * (1 - y ** 2)
 
 
 def exp(input):
@@ -65,6 +74,10 @@ def cos(input):
 
 def tan(input):
     return Tan()(input)
+
+
+def tanh(input):
+    return Tanh()(input)
 
 
 def square(input):
