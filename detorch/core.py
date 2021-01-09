@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import weakref
 import numpy as np
 from ds import Heap
+from .utils import *
 
 
 class Config:
@@ -27,6 +28,8 @@ def no_grad():
 
 # TODO: topological sort for graph computation
 class Tensor:
+    __array_priority__ = 1
+
     def __init__(self, data, name='', dtype=None, parent_f=None):
         self.data = self.as_array(data, dtype)
         self.name = name
@@ -74,7 +77,7 @@ class Tensor:
     # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
     def backward(self, retain_grads=False, create_graph=False):
         if self.grad is None:
-            self.grad = np.ones_like(self.data)
+            self.grad = Tensor(np.ones_like(self.data))
 
         heap = Heap(key=lambda x: -x.gen)
         heap.push(self._parent_f)
@@ -123,12 +126,12 @@ class Tensor:
     def transpose(self):
         return transpose(self)
 
-    def T(self):
-        return self.transpose()
-
     def transpose_(self):
         self.data = self.data.T
         return self
+
+    def sum(self, axis=None, keepdims=False):
+        return sum(self, axis=axis, keepdims=keepdims)
 
     def add(self, other):
         return add(self, other)
@@ -190,10 +193,10 @@ class Tensor:
 
     @staticmethod
     def as_array(data, dtype=None):
-        if type(data) == np.ndarray:
-            if dtype is not None:
-                return data.astype(dtype)
-            return data
+        if isinstance(data, np.ndarray):
+            if dtype is None:
+                return data
+            return data.astype(dtype)
         elif np.isscalar(data):
             return np.array(data, dtype=dtype if dtype is not None else Config.default_dtype)
         elif isinstance(data, (tuple, list)):
@@ -204,9 +207,10 @@ class Tensor:
 
 class Function(ABC):
     def __call__(self, *inputs):
-        inputs = [self.as_variable(i) for i in inputs]
+        inputs = [self.as_variable(i, dtype=Config.default_dtype) for i in inputs]
         xs = [i.data for i in inputs]
-        xs = self.forward(*xs)
+
+        xs = self.forward(*xs)  # all x in xs is supposed to be np.ndarray
         if not isinstance(xs, tuple):
             xs = (xs, )
 
@@ -221,7 +225,7 @@ class Function(ABC):
         return ys if len(ys) > 1 else ys[0]
 
     @staticmethod
-    def as_variable(x, dtype=Config.default_dtype):
+    def as_variable(x, dtype=None):
         if isinstance(x, Tensor):
             return x
         return Tensor(x, dtype=dtype)
@@ -251,7 +255,7 @@ class View(Function):
 
 class Transpose(Function):
     def forward(self, x):
-        return x.data.T
+        return x.T
 
     def backward(self, dy):
         return transpose(dy)
@@ -267,36 +271,52 @@ class Neg(Function):
 
 class Add(Function):
     def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
         return x0 + x1
 
     def backward(self, dy):
-        return (dy, dy)
+        dy0, dy1 = dy, dy
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return (dy0, dy1)
 
 
 class Sub(Function):
     def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
         return x0 - x1
 
     def backward(self, dy):
-        return (dy, -dy)
+        dy0, dy1 = dy, -dy
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return (dy0, dy1)
 
 
 class Mul(Function):
     def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
         return x0 * x1
 
     def backward(self, dy):
         x0, x1 = self.inputs
-        return (x1 * dy, x0 * dy)
+        dy0, dy1 = (x1 * dy, x0 * dy)
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return dy0, dy1
 
 
 class Div(Function):
     def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
         return x0 / x1
 
     def backward(self, dy):
         x0, x1 = self.inputs
-        return (dy / x1, dy * -x0 / x1 ** 2)
+        dy0, dy1 = (dy / x1, dy * -x0 / x1 ** 2)
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return dy0, dy1
 
 
 class Pow(Function):
@@ -344,7 +364,7 @@ class SumTo(Function):
 
     def forward(self, x):
         self.x_shape = x.shape
-        return sum_to(x, self.shape)
+        return np_sum_to(x, self.shape)
 
     def backward(self, dy):
         return broadcast_to(dy, self.x_shape)
@@ -356,7 +376,9 @@ class MatMul(Function):
 
     def backward(self, dy):
         x0, x1 = self.inputs
-        return mm(dy, x1.T), mm(x0.T, dy)
+        dy0 = mm(dy, x1.T)
+        dy1 = mm(x0.T, dy)
+        return dy0, dy1
 
 
 def view(input, *shape):

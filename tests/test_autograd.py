@@ -25,7 +25,7 @@ class AddTest(unittest.TestCase):
         y = add(a, x)
         y.backward()
         num_grad = numerical_differentiation(lambda x: add(a, x), x, epsilon=1e-4)
-        self.assertTrue(np.allclose(x.grad, num_grad))
+        self.assertTrue(np.allclose(x.grad.data, num_grad))
 
 
 class SubTest(unittest.TestCase):
@@ -41,7 +41,7 @@ class SubTest(unittest.TestCase):
         y = sub(a, x)
         y.backward()
         num_grad = numerical_differentiation(lambda x: sub(a, x), x, epsilon=1e-4)
-        self.assertTrue(np.allclose(x.grad, num_grad))
+        self.assertTrue(np.allclose(x.grad.data, num_grad))
 
 
 class MulTest(unittest.TestCase):
@@ -57,7 +57,20 @@ class MulTest(unittest.TestCase):
         y = mul(a, x)
         y.backward()
         num_grad = numerical_differentiation(lambda x: mul(a, x), x, epsilon=1e-4)
-        self.assertTrue(np.allclose(x.grad, num_grad))
+        self.assertTrue(np.allclose(x.grad.data, num_grad))
+
+
+class SumTest(unittest.TestCase):
+    def test_sum_function(self):
+        a = ones(3, 3)
+        b = a.sum()
+        self.assertTrue(b.data == 9.0)
+
+    def test_gradient(self):
+        a = ones(3, 3)
+        b = a.sum()
+        b.backward()
+        self.assertTrue(np.alltrue(a.grad.data == a.data))
 
 
 class GraphTest(unittest.TestCase):
@@ -65,13 +78,13 @@ class GraphTest(unittest.TestCase):
         a = Tensor(3.0)
         b = add(a, a)
         b.backward()
-        self.assertTrue(a.grad == 2.0)
+        self.assertTrue(a.grad.data == 2.0)
 
         b.zero_grad()
 
         b = add(add(a, a), a)
         b.backward()
-        self.assertTrue(a.grad == 3.0)
+        self.assertTrue(a.grad.data == 3.0)
 
     def test_branch_out_flow(self):
         a = Tensor(2.0)
@@ -79,7 +92,7 @@ class GraphTest(unittest.TestCase):
         x = add(square(x), square(x))
         x.backward()
         self.assertTrue(x.data == 32.0)
-        self.assertTrue(a.grad == 64.0)
+        self.assertTrue(a.grad.data == 64.0)
 
 
 

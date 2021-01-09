@@ -8,8 +8,8 @@ class Exp(detorch.Function):
         return np.exp(x)
 
     def backward(self, dy):
-        x = self.inputs
-        return np.exp(x) * dy
+        x, = self.inputs
+        return exp(x) * dy
 
 
 class Log(detorch.Function):
@@ -17,7 +17,7 @@ class Log(detorch.Function):
         return np.log(x)
 
     def backward(self, dy):
-        x = self.inputs[0].data
+        x, = self.inputs
         return dy / x
 
 
@@ -123,6 +123,11 @@ def goldstein(x, y):
 
 def rosenbrock(x0, x1):
     return 100 * (x1 - x0 ** 2) ** 2 + (x0 - 1) ** 2
+
+
+# statistics
+def mean(x):
+    return x.sum() / x.size
 
 
 def tmp_test():

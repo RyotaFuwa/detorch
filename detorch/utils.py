@@ -1,8 +1,8 @@
 import numpy as np
-from .core import Tensor, Function
+
 
 # Heavily rely on source at https://github.com/oreilly-japan/deep-learning-from-scratch-3/blob/master/dezero/utils.py
-def sum_to(x, shape):
+def np_sum_to(x, shape):
     ndim = len(shape)
     lead = x.ndim - ndim
     lead_axis = tuple(range(lead))
@@ -33,33 +33,3 @@ def reshape_sum_backward(gy, x_shape, axis, keepdims):
     gy = gy.reshape(shape)  # reshape
     return gy
 
-
-# tensor alternatives for numpy functions
-
-def zeros_like(x: Tensor):
-    data = np.zeros_like(x.data)
-    return Tensor(data)
-
-
-def ones_like(x: Tensor):
-    data = np.ones_like(x.data)
-    return Tensor(data)
-
-
-def randn_like(x: Tensor):
-    data = np.random.randn(*x.shape)
-
-
-def zeros(*shape):
-    data = np.fill(shape)
-    return Tensor(data)
-
-
-def ones(*shape):
-    data = np.ones(shape)
-    return Tensor(data)
-
-
-def fill(num, shape):
-    data = np.ones(shape) * num
-    return Tensor(data)

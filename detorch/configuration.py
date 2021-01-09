@@ -1,5 +1,5 @@
-import numpy as np
 import contextlib
+import numpy as np
 
 
 class Config:
