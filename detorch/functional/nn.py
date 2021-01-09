@@ -1,4 +1,4 @@
-from detorch import *
+from .maths import mm
 
 
 def linear(x, A, b):

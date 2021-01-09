@@ -1,4 +1,7 @@
+from ds import Heap
 from .configuration import *
+import detorch.functional as F
+
 
 # TODO: topological sort for graph computation
 class Tensor:
@@ -44,10 +47,6 @@ class Tensor:
     def dtype(self):
         return self.data.dtype
 
-    @property
-    def T(self):
-        return transpose(self)
-
     # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
     def backward(self, retain_grads=False, create_graph=False):
         if self.grad is None:
@@ -92,80 +91,84 @@ class Tensor:
                 if i.parent_f is not None:
                     f_nodes.append(i.parent_f)
 
+    @property
+    def T(self):
+        return F.transpose(self)
+
     def view(self, *shape):
-        return view(self, *shape)
+        return F.view(self, *shape)
 
     def view_(self, *shape):
         self.data.reshape(shape)
         return self
 
     def transpose(self):
-        return transpose(self)
+        return F.transpose(self)
 
     def transpose_(self):
         self.data = self.data.T
         return self
 
     def sum(self, axis=None, keepdims=False):
-        return sum(self, axis=axis, keepdims=keepdims)
+        return F.sum(self, axis=axis, keepdims=keepdims)
 
     def add(self, other):
-        return add(self, other)
+        return F.add(self, other)
 
     def add_(self, other):
         self.data += other.data
         return self
 
     def sub(self, other):
-        return sub(self, other)
+        return F.sub(self, other)
 
     def sub_(self, other):
         self.data -= other.data
         return self
 
     def mul(self, other):
-        return mul(self, other)
+        return F.mul(self, other)
 
     def mul_(self, other):
         self.data -= other.data
         return self
 
     def div(self, other):
-        return div(self, other)
+        return F.div(self, other)
 
     def div_(self, other):
         self.data -= other.data
         return self
 
     def __neg__(self):
-        return neg(self)
+        return F.neg(self)
 
     def __add__(self, other):
-        return add(self, other)
+        return F.add(self, other)
 
     def __radd__(self, other):
-        return add(other, self)
+        return F.add(other, self)
 
     def __sub__(self, other):
-        return sub(self, other)
+        return F.sub(self, other)
 
     def __rsub__(self, other):
-        return sub(other, self)
+        return F.sub(other, self)
 
     def __mul__(self, other):
-        return mul(self, other)
+        return F.mul(self, other)
 
     def __rmul__(self, other):
-        return mul(other, self)
+        return F.mul(other, self)
 
     def __truediv__(self, other):
-        return div(self, other)
+        return F.div(self, other)
 
     def __rtruediv__(self, other):
-        return div(other, self)
+        return F.div(other, self)
 
     def __pow__(self, power):
-        return pow(self, power)
+        return F.pow(self, power)
 
     @staticmethod
     def as_array(data, dtype=None):

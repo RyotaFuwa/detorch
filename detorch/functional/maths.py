@@ -1,9 +1,152 @@
 import numpy as np
 import detorch
-from detorch import Tensor, Function, Config
+from detorch import function
+from detorch.utils import *
 
 
-class Exp(detorch.Function):
+# TODO: Type checking for inputs and outputs
+# each function has requirements on the shape and type of each input and output, also the num of inputs and outputs
+class View(function.Function):
+    def __init__(self, *shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        return x.reshape(self.shape)
+
+    def backward(self, dy):
+        return view(self, *self.x_shape)
+
+
+class Transpose(function.Function):
+    def forward(self, x):
+        return x.T
+
+    def backward(self, dy):
+        return transpose(dy)
+
+
+class Neg(function.Function):
+    def forward(self, x):
+        return -x
+
+    def backward(self, dy):
+        return -dy
+
+
+class Add(function.Function):
+    def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
+        return x0 + x1
+
+    def backward(self, dy):
+        dy0, dy1 = dy, dy
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return (dy0, dy1)
+
+
+class Sub(function.Function):
+    def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
+        return x0 - x1
+
+    def backward(self, dy):
+        dy0, dy1 = dy, -dy
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return (dy0, dy1)
+
+
+class Mul(function.Function):
+    def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
+        return x0 * x1
+
+    def backward(self, dy):
+        x0, x1 = self.inputs
+        dy0, dy1 = (x1 * dy, x0 * dy)
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return dy0, dy1
+
+
+class Div(function.Function):
+    def forward(self, x0, x1):
+        self.shape_x0, self.shape_x1 = x0.shape, x1.shape
+        return x0 / x1
+
+    def backward(self, dy):
+        x0, x1 = self.inputs
+        dy0, dy1 = (dy / x1, dy * -x0 / x1 ** 2)
+        if self.shape_x0 != self.shape_x1:
+            dy0, dy1 = (sum_to(dy0, self.shape_x0), sum_to(dy1, self.shape_x1))
+        return dy0, dy1
+
+
+class Pow(function.Function):
+    def __init__(self, exponent):
+        self.exponent = exponent
+
+    def forward(self, x):
+        return x ** self.exponent
+
+    def backward(self, dy):
+        x, = self.inputs
+        return dy * self.exponent * x ** (self.exponent - 1)
+
+
+class Sum(function.Function):
+    def __init__(self, axis=None, keepdims=False):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        return x.sum(axis=self.axis, keepdims=self.keepdims)
+
+    def backward(self, dy):
+        if not self.keepdims:
+            pass
+        return broadcast_to(dy, self.x_shape)
+
+
+class BroadcastTo(function.Function):
+    def __init__(self, *shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        return np.broadcast_to(x, self.shape)
+
+    def backward(self, dy):
+        return sum_to(dy, self.x_shape)
+
+
+class SumTo(function.Function):
+    def __init__(self, *shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        return np_sum_to(x, self.shape)
+
+    def backward(self, dy):
+        return broadcast_to(dy, self.x_shape)
+
+
+class MatMul(function.Function):
+    def forward(self, x0, x1):
+        return np.dot(x0, x1)
+
+    def backward(self, dy):
+        x0, x1 = self.inputs
+        dy0 = mm(dy, x1.T)
+        dy1 = mm(x0.T, dy)
+        return dy0, dy1
+
+
+class Exp(detorch.function.Function):
     def forward(self, x):
         return np.exp(x)
 
@@ -12,7 +155,7 @@ class Exp(detorch.Function):
         return exp(x) * dy
 
 
-class Log(detorch.Function):
+class Log(detorch.function.Function):
     def forward(self, x):
         return np.log(x)
 
@@ -21,7 +164,7 @@ class Log(detorch.Function):
         return dy / x
 
 
-class Sin(detorch.Function):
+class Sin(detorch.function.Function):
     def forward(self, x):
         return np.sin(x)
 
@@ -30,7 +173,7 @@ class Sin(detorch.Function):
         return cos(x) * dy
 
 
-class Cos(detorch.Function):
+class Cos(detorch.function.Function):
     def forward(self, x):
         return np.cos(x)
 
@@ -39,7 +182,7 @@ class Cos(detorch.Function):
         return -sin(x) * dy
 
 
-class Tan(detorch.Function):
+class Tan(detorch.function.Function):
     def forward(self, x):
         return np.tan(x)
 
@@ -48,7 +191,7 @@ class Tan(detorch.Function):
         return dy / cos(x) ** 2
 
 
-class Tanh(detorch.Function):
+class Tanh(detorch.function.Function):
     def forward(self, x):
         return np.tanh(x)
 
@@ -57,15 +200,67 @@ class Tanh(detorch.Function):
         return dy * (1 - y ** 2)
 
 
-class Max(detorch.Function):
+class Max(detorch.function.Function):
     def forward(self, x0, x1):
         return np.max(x0, x1)
 
     def backward(self, dy):
         x0, x1 = self.inputs
-        mask0 = Tensor(x0 >= x1)
-        mask1 = Tensor(x0 < x1)
+        mask0 = x0 >= x1
+        mask1 = x0 < x1
         return mask0 * dy, mask1 * dy
+
+
+def view(input, *shape):
+    return View(shape)(input)
+
+
+def transpose(input):
+    return Transpose()(input)
+
+
+def neg(input):
+    return Neg()(input)
+
+
+def add(input1, input2):
+    return Add()(input1, input2)
+
+
+def sub(input1, input2):
+    return Sub()(input1, input2)
+
+
+def mul(input1, input2):
+    return Mul()(input1, input2)
+
+
+def div(input1, input2):
+    return Div()(input1, input2)
+
+
+def pow(input, exponent):
+    return Pow(exponent)(input)
+
+
+def sum(input, axis=None, keepdims=False):
+    return Sum(axis=axis, keepdims=keepdims)(input)
+
+
+def broadcast_to(input, shape):
+    if input.shape == shape:
+        return input
+    return BroadcastTo(*shape)(input)
+
+
+def sum_to(input, shape):
+    if input.shape == shape:
+        return input
+    return SumTo(*shape)(input)
+
+
+def mm(input1, input2):
+    return MatMul()(input1, input2)
 
 
 def exp(input):
@@ -97,15 +292,15 @@ def max(input0, input1):
 
 
 def square(input):
-    return detorch.pow(input, 2)
+    return pow(input, 2)
 
 
 def cube(input):
-    return detorch.pow(input, 3)
+    return pow(input, 3)
 
 
 def sqrt(input):
-    return detorch.pow(input, 0.5)
+    return pow(input, 0.5)
 
 
 def sphere(x, y):
