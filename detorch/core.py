@@ -4,11 +4,10 @@ import weakref
 import numpy as np
 from ds import Heap
 
-DEFAULT_DTYPE = np.float64
-
 
 class Config:
     enable_backprop = True
+    default_dtype = np.float64
 
 
 @contextlib.contextmanager
@@ -28,12 +27,16 @@ def no_grad():
 
 # TODO: topological sort for graph computation
 class Tensor:
-    def __init__(self, data, name='', dtype=DEFAULT_DTYPE, parent_f=None):
+    def __init__(self, data, name='', dtype=None, parent_f=None):
         self.data = self.as_array(data, dtype)
         self.name = name
         self.grad = None
         self._parent_f = parent_f
         self.gen = 0 if parent_f is None else parent_f.gen + 1  # generation for graph computation order
+
+    def copy(self):
+        r"""copy the tensor. Technically, this operation copies only data and DOES NOT copy parent_f"""
+        return Tensor(self.data.copy(), name=self.name, parent_f=self.parent_f)
 
     def __len__(self):
         return len(self.data)
@@ -192,9 +195,9 @@ class Tensor:
                 return data.astype(dtype)
             return data
         elif np.isscalar(data):
-            return np.array(data, dtype=dtype if dtype is not None else DEFAULT_DTYPE)
+            return np.array(data, dtype=dtype if dtype is not None else Config.default_dtype)
         elif isinstance(data, (tuple, list)):
-            return np.array(data, dtype=dtype if dtype is not None else DEFAULT_DTYPE)
+            return np.array(data, dtype=dtype if dtype is not None else Config.default_dtype)
         else:
             raise TypeError(f"data type of {data} is not compatible. data should be an array-like data structure")
 
@@ -218,7 +221,7 @@ class Function(ABC):
         return ys if len(ys) > 1 else ys[0]
 
     @staticmethod
-    def as_variable(x, dtype=DEFAULT_DTYPE):
+    def as_variable(x, dtype=Config.default_dtype):
         if isinstance(x, Tensor):
             return x
         return Tensor(x, dtype=dtype)
@@ -332,7 +335,6 @@ class BroadcastTo(Function):
         return np.broadcast_to(x, self.shape)
 
     def backward(self, dy):
-
         return sum_to(dy, self.x_shape)
 
 

@@ -1,5 +1,6 @@
 import numpy as np
 import detorch
+from detorch import Tensor, Function, Config
 
 
 class Exp(detorch.Function):
@@ -56,6 +57,17 @@ class Tanh(detorch.Function):
         return dy * (1 - y ** 2)
 
 
+class Max(detorch.Function):
+    def forward(self, x0, x1):
+        return np.max(x0, x1)
+
+    def backward(self, dy):
+        x0, x1 = self.inputs
+        mask0 = Tensor(x0 >= x1)
+        mask1 = Tensor(x0 < x1)
+        return mask0 * dy, mask1 * dy
+
+
 def exp(input):
     return Exp()(input)
 
@@ -78,6 +90,10 @@ def tan(input):
 
 def tanh(input):
     return Tanh()(input)
+
+
+def max(input0, input1):
+    return Max()(input0, input1)
 
 
 def square(input):
