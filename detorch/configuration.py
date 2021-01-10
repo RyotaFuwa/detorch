@@ -5,6 +5,7 @@ import numpy as np
 class Config:
     enable_backprop = True
     default_dtype = np.float64
+    init_method = 'xavier'
 
 
 @contextlib.contextmanager

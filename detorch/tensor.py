@@ -1,3 +1,4 @@
+import numpy as np
 from ds import Heap
 from .configuration import *
 import detorch.functional as F
@@ -23,9 +24,9 @@ class Tensor:
 
     def __repr__(self):
         if self.data is None:
-            return 'variable(None)'
+            return 'tensor(None)'
         p = str(self.data).replace('\n', '\n' + ' ' * 9)
-        return 'variable(' + p + ')'
+        return 'tensor(' + p + ')'
 
     @property
     def parent_f(self):
@@ -79,21 +80,12 @@ class Tensor:
                     for y in f.outputs:
                         y().grad = None
 
-    def zero_grad(self):
-        self.grad = None
-        if self.parent_f is None:
-            return
-        f_nodes = [self.parent_f]
-        while f_nodes:
-            f = f_nodes.pop()
-            for i in f.inputs:
-                i.grad = None
-                if i.parent_f is not None:
-                    f_nodes.append(i.parent_f)
-
     @property
     def T(self):
         return F.transpose(self)
+
+    def clear_grad(self):
+        self.grad = None
 
     def view(self, *shape):
         return F.view(self, *shape)
@@ -169,6 +161,12 @@ class Tensor:
 
     def __pow__(self, power):
         return F.pow(self, power)
+
+    def __matmul__(self, other):
+        return F.mm(self, other)
+
+    def __rmatmul__(self, other):
+        return F.mm(other, self)
 
     @staticmethod
     def as_array(data, dtype=None):

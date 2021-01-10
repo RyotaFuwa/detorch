@@ -321,8 +321,8 @@ def rosenbrock(x0, x1):
 
 
 # statistics
-def mean(x):
-    return x.sum() / x.size
+def mean(x, axis=None, keepdims=False):
+    return x.sum(axis=axis, keepdims=keepdims) / x.size
 
 
 def tmp_test():
