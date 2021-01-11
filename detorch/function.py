@@ -6,7 +6,7 @@ from detorch import tensor
 
 class Function(ABC):
     def __call__(self, *inputs):
-        inputs = [self.as_variable(i, dtype=Config.default_dtype) for i in inputs]
+        inputs = [tensor.Tensor.as_tensor(i, dtype=Config.default_dtype) for i in inputs]
         xs = [i.data for i in inputs]
 
         xs = self.forward(*xs)  # all x in xs is supposed to be np.ndarray
@@ -22,12 +22,6 @@ class Function(ABC):
             self.outputs = [weakref.ref(y) for y in ys]
 
         return ys if len(ys) > 1 else ys[0]
-
-    @staticmethod
-    def as_variable(x, dtype=None):
-        if isinstance(x, tensor.Tensor):
-            return x
-        return tensor.Tensor(x, dtype=dtype)
 
     @abstractmethod
     def forward(self, *xs):

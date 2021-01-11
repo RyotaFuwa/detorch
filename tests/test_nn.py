@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import detorch
 import detorch.functional as F
 import detorch.nn as nn
+from detorch.optim import SGD
 
 import torch
 import torch.nn as tnn
@@ -13,7 +14,7 @@ import torch.nn.functional as tF
 
 def main_detorch(x, y):
 
-    class FNN2(nn.Module):
+    class TwoLayerNet(nn.Module):
         def __init__(self):
             super().__init__()
             self.layer1 = nn.Linear(1, 10)
@@ -27,7 +28,8 @@ def main_detorch(x, y):
 
     lr = 0.2
     iters = 10000
-    model = FNN2()
+    model = TwoLayerNet()
+    criterion = SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     for i in range(iters):
         y_hat = model(x)
@@ -36,8 +38,7 @@ def main_detorch(x, y):
         model.clear_grad()
         loss.backward()
 
-        for p in model.parameters():
-            p.data -= lr * p.grad.data
+        criterion.step()
 
         if i % 1000 == 0:
             print(loss)

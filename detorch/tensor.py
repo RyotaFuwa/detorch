@@ -9,15 +9,16 @@ class Tensor:
     __array_priority__ = 1
 
     def __init__(self, data, name='', dtype=None, parent_f=None):
-        self.data = self.as_array(data, dtype)
+        if isinstance(data, Tensor):
+            tensor = data
+            self.data = tensor.data
+        else:
+            self.data = self._as_array(data, dtype)
+
         self.name = name
         self.grad = None
         self._parent_f = parent_f
         self.gen = 0 if parent_f is None else parent_f.gen + 1  # generation for graph computation order
-
-    def copy(self):
-        r"""copy the tensor. Technically, this operation copies only data and DOES NOT copy parent_f"""
-        return Tensor(self.data.copy(), name=self.name, parent_f=self.parent_f)
 
     def __len__(self):
         return len(self.data)
@@ -47,6 +48,21 @@ class Tensor:
     @property
     def dtype(self):
         return self.data.dtype
+
+    def clone(self):
+        r"""copy the tensor. Technically, this operation copies only data and DOES NOT copy parent_f"""
+        return Tensor(self.data.copy(), name=self.name, parent_f=self.parent_f)
+
+    def detach(self):
+        self._parent_f = None
+        self.is_leaf = True
+        return self
+
+    @staticmethod
+    def as_tensor(x, dtype=None):
+        if isinstance(x, Tensor):
+            return x
+        return Tensor(x, dtype=dtype)
 
     # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
     def backward(self, retain_grads=False, create_graph=False):
@@ -108,6 +124,7 @@ class Tensor:
         return F.add(self, other)
 
     def add_(self, other):
+        other = self.as_tensor(other)
         self.data += other.data
         return self
 
@@ -115,6 +132,7 @@ class Tensor:
         return F.sub(self, other)
 
     def sub_(self, other):
+        other = self.as_tensor(other)
         self.data -= other.data
         return self
 
@@ -122,13 +140,15 @@ class Tensor:
         return F.mul(self, other)
 
     def mul_(self, other):
-        self.data -= other.data
+        other = self.as_tensor(other)
+        self.data *= other.data
         return self
 
     def div(self, other):
         return F.div(self, other)
 
     def div_(self, other):
+        other = self.as_tensor(other)
         self.data -= other.data
         return self
 
@@ -138,11 +158,17 @@ class Tensor:
     def __add__(self, other):
         return F.add(self, other)
 
+    def __iadd__(self, other):
+        return self.add_(other)
+
     def __radd__(self, other):
         return F.add(other, self)
 
     def __sub__(self, other):
         return F.sub(self, other)
+
+    def __isub__(self, other):
+        return self.sub_(other)
 
     def __rsub__(self, other):
         return F.sub(other, self)
@@ -150,11 +176,17 @@ class Tensor:
     def __mul__(self, other):
         return F.mul(self, other)
 
+    def __imul__(self, other):
+        return self.mul_(other)
+
     def __rmul__(self, other):
         return F.mul(other, self)
 
     def __truediv__(self, other):
         return F.div(self, other)
+
+    def __itruediv__(self, other):
+        return self.div_(other)
 
     def __rtruediv__(self, other):
         return F.div(other, self)
@@ -169,7 +201,7 @@ class Tensor:
         return F.mm(other, self)
 
     @staticmethod
-    def as_array(data, dtype=None):
+    def _as_array(data, dtype=None):
         if isinstance(data, np.ndarray):
             if dtype is None:
                 return data

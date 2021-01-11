@@ -2,6 +2,13 @@ from detorch.nn import Linear, Module
 from detorch.functional import sigmoid
 
 
+# test module
+class TwoLayerNet(Module):
+    def __init__(self):
+        super().__init__()
+
+
+
 class MLP(Module):
     def __init__(self, input_shape, output_shape, hidden_layers=[], activation=sigmoid):
         super().__init__()

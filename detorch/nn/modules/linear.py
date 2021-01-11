@@ -1,10 +1,19 @@
 import numpy as np
+import detorch
 from detorch import Config, Parameter
-from .layer import Layer
+from detorch.nn.module import Module
 import detorch.functional as F
 
 
-class Linear(Layer):
+class Identity(Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input):
+        return input
+
+
+class Linear(Module):
     def __init__(self, input_size, output_size, bias=True, dtype=Config.default_dtype, init_method=Config.init_method):
         super().__init__()
         self.input_size = input_size
@@ -19,6 +28,7 @@ class Linear(Layer):
         else:
             return x @ self.A
 
+    @detorch.no_grad()
     def init_weights(self, init_method):
         I, O = self.input_size, self.output_size
         b = None
