@@ -139,8 +139,14 @@ def main():
   data_size = len(train_x)
   iters = math.ceil(data_size / batch_size)
   
-  model = nn.MLP(input_shape=2, output_shape=3, hidden_layers=[25, 25, 25])
-  criterion = optim.SGD(model.parameters(), lr=0.1, momentum=0.85)
+  # model definition
+  layers = [nn.Linear(2, 25)]
+  for i in range(2):
+    layers += [F.relu, nn.Linear(25, 25)]
+  layers += [F.relu, nn.Linear(25, 3)]
+  model = nn.Sequential(layers)
+  
+  criterion = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
   
   for epoch in range(epochs):
     indices = np.random.permutation(data_size)
@@ -151,8 +157,9 @@ def main():
       batch_x = train_x[batch_idx]
       batch_y = train_y[batch_idx]
       
-      y_pred = model(batch_x)
-      loss = F.nnl_loss_1d(F.softmax(y_pred), batch_y)
+      batch_y_pred = model(batch_x)
+      # loss = F.nll_loss(F.softmax(batch_y_pred), batch_y)
+      loss = F.cross_entropy_loss(batch_y_pred, batch_y)
       
       model.zero_grad()
       loss.backward()

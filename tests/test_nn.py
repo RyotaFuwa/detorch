@@ -12,21 +12,14 @@ from detorch.optim import SGD
 
 
 def main_detorch(x, y):
-  class TwoLayerNet(nn.Module):
-    def __init__(self):
-      super().__init__()
-      self.layer1 = nn.Linear(1, 10)
-      self.layer2 = nn.Linear(10, 1)
-    
-    def forward(self, x):
-      x = self.layer1(x)
-      x = F.sigmoid(x)
-      x = self.layer2(x)
-      return x
-  
   lr = 0.2
   iters = 10000
-  model = TwoLayerNet()
+  # model = nn.TwoLayerNet(1, 1, 10)
+  model = nn.Sequential([
+    nn.Linear(1, 10),
+    F.sigmoid,
+    nn.Linear(10, 1)
+  ])
   criterion = SGD(model.parameters(), lr=0.1, momentum=0.9)
   
   for i in range(iters):

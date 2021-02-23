@@ -1,2 +1,2 @@
 from .linear import Linear
-from .mlp import *
+from .sequential import *
