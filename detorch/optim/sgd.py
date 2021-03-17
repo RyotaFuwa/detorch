@@ -4,7 +4,7 @@ from detorch import Optimizer, no_grad
 
 
 class SGD(Optimizer):
-  def __init__(self, parameters, lr=0.1, momentum=0):
+  def __init__(self, parameters, lr=0.01, momentum=0):
     super().__init__(parameters)
     self.lr = lr
     self.momentum = momentum

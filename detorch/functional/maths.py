@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Optional
 import detorch
 from detorch import function
 from detorch.utils import *
@@ -250,6 +250,7 @@ class Tanh(detorch.function.Function):
     return dy * (1 - y ** 2)
 
 
+# TODO: also implement max as in np.max, the one which gets max value in data unlike comparative max here.
 class Max(detorch.function.Function):
   def forward(self, x0, x1):
     return np.maximum(x0, x1)
@@ -262,9 +263,29 @@ class Max(detorch.function.Function):
 
 
 def view(input, *shape):
-  return View(shape)(input)
+  return View(*shape)(input)
 
 
+def flatten(input, preserve_row=False):
+  if preserve_row:
+    n_rows = input.shape[0]
+    return View(n_rows, -1)(input)
+  return View(-1)(input)
+
+
+def squeeze(input, dim: Optional[int] = None):
+  if dim is None:
+    return View(*[d for d in input.shape if d != 1])(input)
+  else:
+    return View(*[d for i, d in enumerate(input.shape) if i != dim])(input)
+  
+
+def unsqueeze(input: 'Tensor', dim: int = -1):
+  new_shape = list(input.shape)
+  new_shape.insert(dim % len(new_shape) + (1 if dim < 0 else 0), 1)
+  return View(new_shape)(input)
+  
+  
 def clip(input, min, max):
   return Clip(min, max)(input)
 

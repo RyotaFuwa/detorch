@@ -12,7 +12,7 @@ class Tensor:
       tensor = data
       self.data = tensor.data
     else:
-      self.data = self._as_array(data, dtype)
+      self.data = self.as_array(data, dtype)
     
     self.name = name
     self.grad = None
@@ -87,58 +87,47 @@ class Tensor:
     self.is_leaf = True
     return self
   
-  @staticmethod
-  def as_tensor(x, dtype=None):
-    if isinstance(x, Tensor):
-      return x
-    return Tensor(x, dtype=dtype)
-  
-  # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
-  def backward(self, retain_grads=False, create_graph=False):
-    if self.grad is None:
-      self.grad = Tensor(np.ones_like(self.data))
-    
-    heap = Heap(key=lambda x: -x.gen)
-    heap.push(self._grad_fn)
-    nodes_seen = set()
-    while len(heap) > 0:
-      f = heap.pop()
-      dys = [y().grad for y in f.outputs]
-      with using_config('enable_backprop', create_graph):
-        grads = f.backward(*dys)
-        if not isinstance(grads, tuple):
-          grads = (grads,)
-        for input, grad in zip(f.inputs, grads):
-          if input.grad is not None:
-            input.grad = input.grad + grad  # CAUTION: do not use +=
-          else:
-            input.grad = grad
-          if input.grad_fn is not None and input.grad_fn not in nodes_seen:
-            nodes_seen.add(input.grad_fn)
-            heap.push(input.grad_fn)
-            
-        if not retain_grads:  # If not intended to hold grads, get rid of f.outputs' grads for memory efficiency.
-          for y in f.outputs:
-            y().grad = None
-  
-  @property
-  def T(self):
-    return F.transpose(self)
-  
   def clear_grad(self):
     self.grad = None
   
-  # syntax sugar for clear_grad
-  def zero_grad(self):
+  def zero_grad(self): # syntax sugar for clear_grad
     self.grad = None
-  
+
+  @property
+  def T(self):
+    return F.transpose(self)
+
   def view(self, *shape):
     return F.view(self, *shape)
   
   def view_(self, *shape):
-    self.data.reshape(shape)
+    self.data = self.data.reshape(shape)
     return self
   
+  def flatten(self, preserve_row=False):
+    return F.flatten(self, preserve_row=preserve_row)
+  
+  def flatten_(self, preserve_row=False):
+    if preserve_row:
+      self.data = self.data.reshape((self.shape[0], -1))
+    else:
+      self.data = self.data.flatten()
+    return self
+  
+  def squeeze(self):
+    return F.squeeze(self)
+  
+  def squeeze_(self):
+    self.data = self.data.squeeze()
+    return self
+
+  def unsqueeze(self, dim=-1):
+    return F.squeeze(self, dim)
+
+  def unsqueeze_(self, dim=-1):
+    self.data = self.data.reshape()
+    return self
+
   def clip(self, min=None, max=None):
     return F.clip(self, min, max)
   
@@ -248,9 +237,15 @@ class Tensor:
   
   def __rmatmul__(self, other):
     return F.mm(other, self)
+
+  @staticmethod
+  def as_tensor(x, dtype=None):
+    if isinstance(x, Tensor):
+      return x
+    return Tensor(x, dtype=dtype)
   
   @staticmethod
-  def _as_array(data, dtype=None):
+  def as_array(data, dtype=None):
     if isinstance(data, np.ndarray):
       array = data
     elif np.isscalar(data):
@@ -262,3 +257,32 @@ class Tensor:
     if dtype is not None:
       return array.astype(dtype)
     return array
+
+  # TODO: compute self.grad with Tensor, now self.grad is np.ndarray
+  def backward(self, retain_grads=False, create_graph=False):
+    if self.grad is None:
+      self.grad = Tensor(np.ones_like(self.data))
+
+    heap = Heap(key=lambda x: -x.gen)
+    heap.push(self._grad_fn)
+    nodes_seen = set()
+    while len(heap) > 0:
+      f = heap.pop()
+      dys = [y().grad for y in f.outputs]
+      with using_config('enable_backprop', create_graph):
+        grads = f.backward(*dys)
+        if not isinstance(grads, tuple):
+          grads = (grads,)
+        for input, grad in zip(f.inputs, grads):
+          if input.grad is not None:
+            input.grad = input.grad + grad  # CAUTION: do not use +=
+          else:
+            input.grad = grad
+          if input.grad_fn is not None and input.grad_fn not in nodes_seen:
+            nodes_seen.add(input.grad_fn)
+            heap.push(input.grad_fn)
+    
+        if not retain_grads:  # If not intended to hold grads, get rid of f.outputs' grads for memory efficiency.
+          for y in f.outputs:
+            y().grad = None
+
