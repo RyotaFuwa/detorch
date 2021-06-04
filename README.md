@@ -21,7 +21,7 @@ The problem is a simple classification with 2 dim input (x, y) and 2 class label
 The original objective was to construct a suitable neural net model and find an optimal configuration to get a precise 
 prediction on test data.
 
-![overview of the training dataset](demo/classification_from_CS3423/data/assets/figure1.png)
+![overview of the training dataset](./demo/classification_from_CS3423/data/assets/figure1.png)
 
 #### 3. solution using detorch
 
@@ -79,10 +79,10 @@ print(f"accuracy on test dataset: {round(acc / n_samples * 100, 3)}%")
 
 3.4 A Result
 
-![a result on test dataset](demo/classification_from_CS3423/data/assets/figure2.png)
+![a result on test dataset](./demo/classification_from_CS3423/data/assets/figure2.png)
 Accuracy On Test Dataset: 94.792%
 
-※　Please refer to the full script [here](demo/classification_from_CS3423/main.py) for the detail.
+※　Please refer to the full script [here](./demo/classification_from_CS3423/main.py) for the detail.
 
 
 ### References
