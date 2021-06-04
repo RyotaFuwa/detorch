@@ -56,7 +56,7 @@ class ExampleDataset(Dataset):
     plt.show()
 
 
-class AFFModel(nn.Module):
+class FNN(nn.Module):
   def __init__(self):
     super().__init__()
     self.linear1 = nn.Linear(2, 25)
@@ -79,11 +79,11 @@ class AFFModel(nn.Module):
 
 def main():
   # setting config variables, dataset and model
-  epochs = 200
+  epochs = 150
   batch_size = 32
   dataset = ExampleDataset()
   dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-  model = AFFModel()
+  model = FNN()
   criteria = optim.Adam(model.parameters())
   
   # Training the model
@@ -114,7 +114,8 @@ def main():
     plt.scatter(x[~match, 0], x[~match, 1], c=['red' for _ in range((~match).sum())])
     acc += match.sum()
     n_samples += batch_size
-  dataset.plot(title='evaluation on test data. (accuracy={})'.format(acc / n_samples))
+  dataset.plot(title='evaluation on test data (wrong prediction="red")')
+  print(f"accuracy on test dataset: {round(acc / n_samples * 100, 3)}%")
   plt.show()
 
 
