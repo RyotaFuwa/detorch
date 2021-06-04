@@ -79,7 +79,7 @@ print(f"accuracy on test dataset: {round(acc / n_samples * 100, 3)}%")
 
 3.4 A Result
 
-![a result on test dataset](./demo/classification_from_CS3423/data/assets/figure2.png)
+![a result on test dataset](./demo/classification_from_CS3423/data/assets/figure2.png).   
 Accuracy On Test Dataset: 94.792%
 
 ※　Please refer to the full script [here](./demo/classification_from_CS3423/main.py) for the detail.
