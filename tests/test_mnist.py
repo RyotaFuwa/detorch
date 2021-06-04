@@ -1,4 +1,3 @@
-import numpy as np
 import matplotlib.pyplot as plt
 from detorch.datasets import MNIST, DataLoader
 import detorch.functional as F
@@ -17,12 +16,13 @@ if __name__ == '__main__':
   epochs = 5
   
   def transform(x):
-    return x.flatten_(preserve_row=True)
+    return x.flatten()
   
-  dataloader = DataLoader(MNIST(transform=transform), batch_size=batch_size)
+  mnist_dataset = MNIST(transform=transform)
+  dataloader = DataLoader(mnist_dataset, batch_size=batch_size)
   
   model = nn.Sequential([
-    nn.Linear(dataloader.data_shape, 1000),
+    nn.Linear(28 * 28, 1000),
     F.relu,
     nn.Linear(1000, 10),
     F.softmax

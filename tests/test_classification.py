@@ -158,8 +158,8 @@ def main():
       batch_y = train_y[batch_idx]
       
       batch_y_pred = model(batch_x)
-      # loss = F.nll_loss(F.softmax(batch_y_pred), batch_y)
-      loss = F.cross_entropy_loss(batch_y_pred, batch_y)
+      loss = F.nll_loss(F.softmax(batch_y_pred), batch_y)
+      # loss = F.cross_entropy_loss(batch_y_pred, batch_y) # TODO fix it.
       
       model.zero_grad()
       loss.backward()

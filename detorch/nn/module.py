@@ -1,4 +1,5 @@
 import weakref
+from typing import Sequence
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 

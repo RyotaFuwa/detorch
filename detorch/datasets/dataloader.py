@@ -30,7 +30,7 @@ class DataLoader:
     indices_mb = self.indices[i * bs: (i + 1) * bs]
     batch = [self.dataset[i] for i in indices_mb]
     self.iter += 1
-    return np.array([sample[0] for sample in batch]), np.array([sample[1] for sample in batch])
+    return i, np.array([sample[0] for sample in batch]), np.array([sample[1] for sample in batch])
   
   def next(self):
     return self.__next__()
